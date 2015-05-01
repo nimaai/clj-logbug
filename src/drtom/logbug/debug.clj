@@ -44,9 +44,11 @@
                      (apply f args))]
     (hooke/add-hook target-var wrapper-fn)))
 
-(defn re-apply-last-argument [target-var]
-  (apply target-var (@last-arguments (var-key target-var))))
+(defn get-last-argument [target-var]
+  (@last-arguments (var-key target-var)))
 
+(defn re-apply-last-argument [target-var]
+  (apply target-var (get-last-argument target-var)))
 
 ;### Wrap vars of a whole ns ##################################################
 
