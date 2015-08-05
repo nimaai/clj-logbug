@@ -7,12 +7,17 @@
     [clojure.string :as string]
     ))
 
-(defn expand-to-seq [^Throwable tr]
-  (cond
-    (instance? java.sql.SQLException tr)
-    (doall (iterator-seq (.iterator tr)))
-    :else [tr]))
+(defn get-cause [tr]
+  (try
+    (when-let [c (.getCause tr)]
+      [c (get-cause c)])
+    (catch Throwable _)))
 
+(defn expand-to-seq [^Throwable tr]
+  (->> (cond
+         (instance? java.sql.SQLException tr) (iterator-seq (.iterator tr))
+         :else (flatten [tr (get-cause tr)]))
+       (filter identity)))
 
 (defn trace-string-seq [ex]
   (map (fn [e] (with-out-str (stacktrace/print-trace-element e)))
@@ -32,25 +37,20 @@
     #(re-matches filter-regex %)
     ex-seq))
 
+(defn to-string [tr filter-regex]
+  (str [(with-out-str (stacktrace/print-throwable tr))
+        (filter-trace-string-seq (trace-string-seq tr) filter-regex)]))
+
+;(to-string (IllegalStateException. "Just a demo") #".*")
+
 (defn stringify
   ([^Throwable tr]
    (stringify tr *ns-filter-regex* ", "))
   ([^Throwable tr filter-regex join-str]
-   (let [this-tr-str (string/join join-str
-                                  (map
-                                    (fn [ex]
-                                      (logging/debug {:ex ex})
-                                      (str [(with-out-str (stacktrace/print-throwable ex))
-                                            (filter-trace-string-seq (trace-string-seq ex) filter-regex)]))
-                                    (expand-to-seq tr)))]
-     (string/join join-str (flatten (conj [this-tr-str]
-                                          (map #(stringify % filter-regex join-str)
-                                               (try (iterator-seq (.iterator tr))
-                                                    (catch Exception _ [])))
-                                          (try [(stringify (.getCause tr))]
-                                               (catch Exception _ []))))))))
+   (let [fmap #(to-string % filter-regex)]
+     (string/join join-str (map fmap (expand-to-seq tr))))))
 
 
-;(stringify  (IllegalStateException. "Just a demo"))
+;(stringify  (IllegalStateException. "Just a demo", (IllegalStateException. "The Cause")))
 
-;(println (stringify (ex-info "Some error "{:x 42}  (IllegalStateException. "The cause"))))
+;(println (stringify (ex-info "Some error "{:x 42}  (IllegalStateException. "The cause", (IllegalStateException. "The root")))))

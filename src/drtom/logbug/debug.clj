@@ -1,9 +1,10 @@
 ; Copyright © 2013 - 2015 Thomas Schank <DrTom@schank.ch>
 
 (ns drtom.logbug.debug
-  (:require 
-    [clojure.tools.logging :as logging]
+  (:require
     [clj-logging-config.log4j :as logging-config]
+    [clojure.test]
+    [clojure.tools.logging :as logging]
     [robert.hooke :as hooke]
     ))
 
@@ -15,15 +16,15 @@
 
 (defn wrap-with-log-debug [target-var]
   (let [wrapper-fn (fn [f & args]
-                     (logging/log (-> target-var meta :ns) 
-                                  :debug nil 
-                                  [(symbol (str (-> target-var meta :name))) 
+                     (logging/log (-> target-var meta :ns)
+                                  :debug nil
+                                  [(symbol (str (-> target-var meta :name)))
                                    "invoked" {:args args}])
                      (let [res (apply f args)]
-                       (logging/log (-> target-var meta :ns) 
-                                    :debug nil 
-                                    [(symbol (str (-> target-var meta :name))) 
-                                     "returns" {:res res}]) 
+                       (logging/log (-> target-var meta :ns)
+                                    :debug nil
+                                    [(symbol (str (-> target-var meta :name)))
+                                     "returns" {:res res}])
                        res))]
     (hooke/add-hook target-var wrapper-fn)))
 
@@ -37,7 +38,7 @@
 
 (defn wrap-with-remember-last-argument [target-var]
   (let [swap-in (fn [current args]
-                  (conj current 
+                  (conj current
                         {(var-key target-var) args}))
         wrapper-fn (fn [ f & args]
                      (swap! last-arguments swap-in args)
@@ -53,7 +54,7 @@
 ;### Wrap vars of a whole ns ##################################################
 
 (defn- ns-wrappables [ns]
-  (filter #(instance? Runnable (var-get %))
+  (filter #(clojure.test/function? (var-get %))
           (vals (ns-interns ns))))
 
 (defn debug-ns [ns]
@@ -63,7 +64,6 @@
     (wrap-with-log-debug wrappable)
     (wrap-with-remember-last-argument wrappable)))
 
- 
 
 ;### identity-with-logging ns #################################################
 
