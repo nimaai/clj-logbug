@@ -1,4 +1,4 @@
-(defproject drtom/logbug "1.2.5"
+(defproject drtom/logbug "1.2.6"
   :description "Cross-cutting utils for logging and debugging in Clojure."
   :url "https://github.com/drtom/clj-logbug"
   :license {:name "GNU AFFERO GENERAL PUBLIC LICENSE Version 3"

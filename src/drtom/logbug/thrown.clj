@@ -37,9 +37,16 @@
     #(re-matches filter-regex %)
     ex-seq))
 
-(defn to-string [tr filter-regex]
-  (str [(with-out-str (stacktrace/print-throwable tr))
-        (filter-trace-string-seq (trace-string-seq tr) filter-regex)]))
+
+(defn to-string
+  ([tr]
+   (str "  THROWABLE: "
+        (with-out-str (stacktrace/print-throwable tr))
+        (when (instance? clojure.lang.ExceptionInfo tr)
+          (str " " (ex-data tr)))))
+  ([tr filter-regex]
+   (str (to-string tr)
+        [(filter-trace-string-seq (trace-string-seq tr) filter-regex)])))
 
 ;(to-string (IllegalStateException. "Just a demo") #".*")
 
