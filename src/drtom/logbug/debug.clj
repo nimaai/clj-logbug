@@ -15,6 +15,7 @@
 ;### Log arguments and result #################################################
 
 (defn wrap-with-log-debug [target-var]
+  (logging/debug "wrapping for debugging: " target-var)
   (let [wrapper-fn (fn [f & args]
                      (logging/log (-> target-var meta :ns)
                                   :debug nil
@@ -26,7 +27,11 @@
                                     [(symbol (str (-> target-var meta :name)))
                                      "returns" {:res res}])
                        res))]
-    (hooke/add-hook target-var wrapper-fn)))
+    (hooke/add-hook target-var :logbug_wrap wrapper-fn)))
+
+(defn unwrap-with-log-debug [target-var]
+  (logging/debug "unwrapping from debugging: " target-var)
+  (hooke/remove-hook target-var :logbug_wrap))
 
 
 ;### Remember arguments of last call ##########################################
@@ -37,19 +42,25 @@
   (str (-> target-var meta :ns) "/" (-> target-var meta :name)))
 
 (defn wrap-with-remember-last-argument [target-var]
+  (logging/debug "wrapping for remember" target-var)
   (let [swap-in (fn [current args]
                   (conj current
                         {(var-key target-var) args}))
         wrapper-fn (fn [ f & args]
                      (swap! last-arguments swap-in args)
                      (apply f args))]
-    (hooke/add-hook target-var wrapper-fn)))
+    (hooke/add-hook target-var :logbug_remember wrapper-fn)))
+
+(defn unwrap-with-remember-last-argument [target-var]
+  (logging/debug "unwrapping from remember" target-var)
+  (hooke/remove-hook target-var :logbug_remember))
 
 (defn get-last-argument [target-var]
   (@last-arguments (var-key target-var)))
 
 (defn re-apply-last-argument [target-var]
   (apply target-var (get-last-argument target-var)))
+
 
 ;### Wrap vars of a whole ns ##################################################
 
@@ -60,10 +71,13 @@
 (defn debug-ns [ns]
   (logging-config/set-logger! (str ns) :level :debug)
   (doseq [wrappable (ns-wrappables ns)]
-    (logging/debug "wrapping for debugging: " wrappable)
     (wrap-with-log-debug wrappable)
     (wrap-with-remember-last-argument wrappable)))
 
+(defn undebug-ns [ns]
+  (doseq [wrappable (ns-wrappables ns)]
+    (unwrap-with-log-debug wrappable)
+    (unwrap-with-remember-last-argument wrappable)))
 
 ;### identity-with-logging ns #################################################
 
