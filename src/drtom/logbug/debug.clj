@@ -85,3 +85,16 @@
   (logging/log ns :debug nil x)
   x)
 
+;### log expression and return its value ######################################
+
+(defn log-debug-and-return [expr]
+  (do (logging/debug expr) expr))
+
+(defn log-info-and-return [expr]
+  (do (logging/info expr) expr))
+
+(defn log-warn-and-return [expr]
+  (do (logging/warn expr) expr))
+
+(defn log-error-and-return [expr]
+  (do (logging/error expr) expr))
